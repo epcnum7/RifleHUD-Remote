@@ -266,6 +266,11 @@
     return value;
   }
 
+  function optionalZero(input, minimum, maximum, label) {
+    if (input.value.trim() === "") return 0;
+    return requireNumber(input, minimum, maximum, label);
+  }
+
   function bindForm(id, buildCommand) {
     byId(id).addEventListener("submit", (event) => {
       event.preventDefault();
@@ -293,11 +298,17 @@
     type: "da",
     feet: requireInteger(ui.inputs.da, -10000, 30000, "Density altitude")
   }));
-  bindForm("wind-form", () => ({
-    type: "wind",
-    mph: requireNumber(ui.inputs.windSpeed, 0, 150, "Wind speed"),
-    from: requireNumber(ui.inputs.windFrom, 0, 359.999, "Wind bearing")
-  }));
+  bindForm("wind-form", () => {
+    const mph = optionalZero(ui.inputs.windSpeed, 0, 150, "Wind speed");
+    if (mph > 0 && ui.inputs.windFrom.value.trim() === "") {
+      throw new Error("Enter a wind-FROM bearing for nonzero wind");
+    }
+    return {
+      type: "wind",
+      mph,
+      from: optionalZero(ui.inputs.windFrom, 0, 359.999, "Wind bearing")
+    };
+  });
   bindForm("override-form", () => ({
     type: "override",
     mil: requireNumber(ui.inputs.elevation, -20, 40, "Elevation override")
