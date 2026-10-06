@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#090d12">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'self'">
+  <title>RifleHUD Remote</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">FIELD CONTROL</p>
+        <h1>RifleHUD</h1>
+      </div>
+      <div id="link-badge" class="badge badge-offline" aria-live="polite">
+        <span class="status-dot"></span>
+        <span id="link-label">Disconnected</span>
+      </div>
+    </header>
+
+    <section id="compatibility" class="notice hidden" role="alert">
+      This browser does not expose Web Bluetooth. On iPhone, open this page in
+      <a href="https://apps.apple.com/us/app/bluefy-web-ble-browser/id1492822055">Bluefy</a>.
+    </section>
+
+    <section class="card connection-card">
+      <div>
+        <h2>Display link</h2>
+        <p id="connection-detail" class="muted">Power on the StickS3, then connect.</p>
+      </div>
+      <div class="button-row">
+        <button id="connect-button" class="primary">Connect</button>
+        <button id="refresh-button" disabled>Refresh</button>
+        <button id="disconnect-button" class="quiet" disabled>Disconnect</button>
+      </div>
+      <p class="microcopy">If iOS asks for a code, enter the six-digit BLE PIN shown on the RifleHUD.</p>
+    </section>
+
+    <section class="card solution-card" aria-labelledby="solution-heading">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">LIVE FROM DISPLAY</p>
+          <h2 id="solution-heading">Current solution</h2>
+        </div>
+        <span id="solution-source" class="source-tag">NO DATA</span>
+      </div>
+      <div class="solution-primary">
+        <div>
+          <span class="value-label">ELEVATION</span>
+          <strong id="status-elevation">--</strong>
+        </div>
+        <div>
+          <span class="value-label">RANGE</span>
+          <strong id="status-range">--</strong>
+        </div>
+      </div>
+      <dl class="status-grid">
+        <div><dt>Target</dt><dd id="status-target">--</dd></div>
+        <div><dt>Cant</dt><dd id="status-cant">--</dd></div>
+        <div><dt>Requested DA</dt><dd id="status-requested-da">--</dd></div>
+        <div><dt>Table DA</dt><dd id="status-table-da">--</dd></div>
+        <div><dt>Wind</dt><dd id="status-wind">--</dd></div>
+        <div><dt>Range state</dt><dd id="status-range-state">--</dd></div>
+      </dl>
+    </section>
+
+    <section class="card">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">SHOT</p>
+          <h2>Target and range</h2>
+        </div>
+      </div>
+      <form id="target-form" class="control-row">
+        <label for="target-input">Target ID</label>
+        <div class="input-action">
+          <input id="target-input" maxlength="11" autocomplete="off" autocapitalize="characters" placeholder="T3" required>
+          <button type="submit" disabled>Save</button>
+        </div>
+        <small>Up to 11 letters, numbers, dashes, or underscores.</small>
+      </form>
+      <form id="range-form" class="control-row">
+        <label for="range-input">Range</label>
+        <div class="input-with-unit input-action">
+          <input id="range-input" type="number" min="1" max="5000" inputmode="numeric" placeholder="491" required>
+          <span>YD</span>
+          <button type="submit" disabled>Set</button>
+        </div>
+        <small>A changed range clears any manual elevation override.</small>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">CONDITIONS</p>
+          <h2>Atmosphere and wind</h2>
+        </div>
+      </div>
+      <form id="da-form" class="control-row">
+        <label for="da-input">Density altitude</label>
+        <div class="input-with-unit input-action">
+          <input id="da-input" type="number" min="-10000" max="30000" inputmode="numeric" placeholder="3761" required>
+          <span>FT</span>
+          <button type="submit" disabled>Save</button>
+        </div>
+        <small>The HUD selects the nearest packaged DA table.</small>
+      </form>
+      <form id="wind-form" class="control-row">
+        <div class="two-field-row">
+          <label>Wind speed
+            <span class="input-with-unit">
+              <input id="wind-speed-input" type="number" min="0" max="150" step="0.1" inputmode="decimal" placeholder="0.0" required>
+              <span>MPH</span>
+            </span>
+          </label>
+          <label>Wind from
+            <span class="input-with-unit">
+              <input id="wind-from-input" type="number" min="0" max="359.999" step="0.1" inputmode="decimal" placeholder="270" required>
+              <span>°T</span>
+            </span>
+          </label>
+        </div>
+        <button type="submit" class="full-width" disabled>Save wind</button>
+        <small>Wind direction is the true-north bearing the wind comes from. Wind hold is not calculated yet.</small>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">OVERRIDE</p>
+          <h2>Manual elevation</h2>
+        </div>
+      </div>
+      <form id="override-form" class="control-row">
+        <label for="override-input">Elevation hold</label>
+        <div class="input-with-unit input-action">
+          <input id="override-input" type="number" min="-20" max="40" step="0.01" inputmode="decimal" placeholder="2.00" required>
+          <span>MIL</span>
+          <button type="submit" disabled>Apply</button>
+        </div>
+        <small>Requires a saved range and is cleared when range or DA changes.</small>
+      </form>
+    </section>
+
+    <section class="card activity-card">
+      <div class="section-heading compact">
+        <h2>Activity</h2>
+        <button id="clear-log-button" class="text-button">Clear</button>
+      </div>
+      <ol id="activity-log" aria-live="polite">
+        <li>Ready to connect.</li>
+      </ol>
+    </section>
+
+    <footer>
+      <p>Prototype BLE controller · Settings are saved on the RifleHUD.</p>
+      <p id="build-label">Web client v0.1</p>
+    </footer>
+  </main>
+</body>
+</html>

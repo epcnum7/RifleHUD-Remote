@@ -1,0 +1,17 @@
+{
+  "name": "RifleHUD Remote",
+  "short_name": "RifleHUD",
+  "description": "Bluetooth controller for the RifleHUD StickS3 prototype",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#090d12",
+  "theme_color": "#090d12",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
