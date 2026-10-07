@@ -189,7 +189,7 @@
     if (status.target) ui.inputs.target.value = status.target;
     if (Number.isFinite(status.rangeYards)) ui.inputs.range.value = status.rangeYards;
     if (Number.isFinite(status.requestedDaFeet)) ui.inputs.da.value = status.requestedDaFeet;
-      ? `${status.windMph.toFixed(1)} MPH${Number.isFinite(status.windFromDeg) ? ` @ ${status.windFromDeg.toFixed(0)} DEG REL` : ""}`
+    if (Number.isFinite(status.windMph)) ui.inputs.windSpeed.value = status.windMph.toFixed(1);
     if (Number.isFinite(status.windFromDeg)) ui.inputs.windFrom.value = status.windFromDeg.toFixed(1);
     if (status.elevationSource === "manual" && Number.isFinite(status.elevationMil)) {
       ui.inputs.elevation.value = status.elevationMil.toFixed(2);
@@ -220,9 +220,11 @@
       ui.compatibility.classList.remove("hidden");
       throw new Error("Web Bluetooth is unavailable in this browser");
     }
-    setLinkState("connecting", "Choose RifleHUD from the Bluetooth device list.");
+    addLog("Opening Bluetooth device chooser");
+    setLinkState("connecting", "Opening the Bluetooth device list. Choose RifleHUD.");
     device = await navigator.bluetooth.requestDevice({
-      filters: [{ name: "RifleHUD", services: [UUIDS.service] }]
+      acceptAllDevices: true,
+      optionalServices: [UUIDS.service]
     });
     device.addEventListener("gattserverdisconnected", handleDisconnected);
     ui.detail.textContent = "Opening encrypted RifleHUD service…";
