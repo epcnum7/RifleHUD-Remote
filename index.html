@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
-  <script src="app.js" defer></script>
+  <script src="app.js?v=0.6" defer></script>
 </head>
 <body>
   <main class="shell">
@@ -35,9 +35,9 @@
         <p id="connection-detail" class="muted">Power on the StickS3, then connect.</p>
       </div>
       <div class="button-row">
-        <button id="connect-button" class="primary">Connect</button>
-        <button id="refresh-button" disabled>Refresh</button>
-        <button id="disconnect-button" class="quiet" disabled>Disconnect</button>
+        <button id="connect-button" class="primary" type="button">Connect</button>
+        <button id="refresh-button" type="button" disabled>Refresh</button>
+        <button id="disconnect-button" class="quiet" type="button" disabled>Disconnect</button>
       </div>
       <p class="microcopy">Bluefy will list nearby Bluetooth devices. Choose RifleHUD. If iOS asks for a code, enter the six-digit BLE PIN shown on the display.</p>
     </section>
@@ -163,7 +163,7 @@
 
     <footer>
       <p>Prototype BLE controller · Settings are saved on the RifleHUD.</p>
-      <p id="build-label">Web client v0.5</p>
+      <p id="build-label">Web client v0.6 &middot; loading controls...</p>
     </footer>
   </main>
 </body>

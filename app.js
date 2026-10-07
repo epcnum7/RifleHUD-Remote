@@ -20,6 +20,7 @@
     disconnect: byId("disconnect-button"),
     refresh: byId("refresh-button"),
     log: byId("activity-log"),
+    build: byId("build-label"),
     source: byId("solution-source"),
     fields: {
       elevation: byId("status-elevation"),
@@ -285,13 +286,14 @@
   // Web Bluetooth requires requestDevice() to run directly from the user's
   // tap. Deferring connect through the command queue can lose that activation
   // in Bluefy and prevent its device chooser from opening.
-  ui.connect.addEventListener("click", () => {
+  ui.connect.onclick = () => {
+    ui.detail.textContent = "Connect tapped. Opening Bluetooth chooser...";
     connect().catch((error) => {
       const message = error.message || String(error);
       addLog(message, "error");
       setLinkState("disconnected", message || "Connection failed");
     });
-  });
+  };
   ui.disconnect.addEventListener("click", disconnect);
   ui.refresh.addEventListener("click", () => enqueue(fetchStatus));
   byId("clear-log-button").addEventListener("click", () => { ui.log.replaceChildren(); });
@@ -328,9 +330,20 @@
   }));
 
   if (!navigator.bluetooth) ui.compatibility.classList.remove("hidden");
-  setLinkState("disconnected", "Power on the StickS3, then connect.");
+  setLinkState("disconnected", "Controls loaded. Power on the StickS3, then tap Connect.");
+  ui.build.textContent = "Web client v0.6 · controls loaded";
+  addLog("Web controls loaded", "success");
 
-  if ("serviceWorker" in navigator && window.isSecureContext) {
-    navigator.serviceWorker.register("./sw.js").catch(() => undefined);
+  // During BLE prototyping, remove offline workers and caches so Bluefy always
+  // receives the current connection code instead of retaining an older build.
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.getRegistrations()
+      .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister())))
+      .catch(() => undefined);
+  }
+  if ("caches" in window) {
+    caches.keys()
+      .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+      .catch(() => undefined);
   }
 })();
