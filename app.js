@@ -280,7 +280,16 @@
     });
   }
 
-  ui.connect.addEventListener("click", () => enqueue(connect));
+  // Web Bluetooth requires requestDevice() to run directly from the user's
+  // tap. Deferring connect through the command queue can lose that activation
+  // in Bluefy and prevent its device chooser from opening.
+  ui.connect.addEventListener("click", () => {
+    connect().catch((error) => {
+      const message = error.message || String(error);
+      addLog(message, "error");
+      setLinkState("disconnected", message || "Connection failed");
+    });
+  });
   ui.disconnect.addEventListener("click", disconnect);
   ui.refresh.addEventListener("click", () => enqueue(fetchStatus));
   byId("clear-log-button").addEventListener("click", () => { ui.log.replaceChildren(); });
