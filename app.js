@@ -154,9 +154,22 @@
       return;
     }
 
-    if (message.type === "status") {
-      renderStatus(message);
-      pendingStatus?.resolve(message);
+    if (message.type === "status" || message.t === "s") {
+      const status = message.t === "s" ? {
+        target: message.id,
+        rangeYards: message.r,
+        rangeSaved: message.sv === 1,
+        requestedDaFeet: message.da,
+        tableDaFeet: message.td,
+        elevationMil: message.e,
+        windageMil: message.w,
+        elevationSource: message.es === "m" ? "manual" : message.es === "t" ? "table" : undefined,
+        windMph: message.ws,
+        windFromDeg: message.wf,
+        cantDeg: message.c
+      } : message;
+      renderStatus(status);
+      pendingStatus?.resolve(status);
       return;
     }
     if (typeof message.ok === "boolean" && Number.isInteger(message.seq)) {
@@ -331,7 +344,7 @@
 
   if (!navigator.bluetooth) ui.compatibility.classList.remove("hidden");
   setLinkState("disconnected", "Controls loaded. Power on the StickS3, then tap Connect.");
-  ui.build.textContent = "Web client v0.6 · controls loaded";
+  ui.build.textContent = "Web client v0.7 · controls loaded";
   addLog("Web controls loaded", "success");
 
   // During BLE prototyping, remove offline workers and caches so Bluefy always
