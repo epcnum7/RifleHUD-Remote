@@ -311,28 +311,20 @@
   ui.refresh.addEventListener("click", () => enqueue(fetchStatus));
   byId("clear-log-button").addEventListener("click", () => { ui.log.replaceChildren(); });
 
-  bindForm("target-form", () => {
+  bindForm("setup-form", () => {
     const id = ui.inputs.target.value.trim();
     if (!/^[A-Za-z0-9_-]{1,11}$/.test(id)) {
-      throw new Error("Target ID must use 1–11 letters, numbers, dashes, or underscores");
+      throw new Error("Target ID must use 1-11 letters, numbers, dashes, or underscores");
     }
-    return { type: "target", id };
-  });
-  bindForm("range-form", () => ({
-    type: "range",
-    yards: requireInteger(ui.inputs.range, 1, 5000, "Range")
-  }));
-  bindForm("da-form", () => ({
-    type: "da",
-    feet: requireInteger(ui.inputs.da, -10000, 30000, "Density altitude")
-  }));
-  bindForm("wind-form", () => {
     const mph = optionalZero(ui.inputs.windSpeed, 0, 20, "Wind speed");
     if (mph > 0 && ui.inputs.windFrom.value.trim() === "") {
       throw new Error("Enter a wind-FROM bearing for nonzero wind");
     }
     return {
-      type: "wind",
+      type: "setup",
+      target: id,
+      yards: requireInteger(ui.inputs.range, 1, 5000, "Range"),
+      feet: requireInteger(ui.inputs.da, -10000, 30000, "Density altitude"),
       mph,
       from: optionalZero(ui.inputs.windFrom, 0, 359.999, "Wind bearing")
     };
@@ -344,7 +336,7 @@
 
   if (!navigator.bluetooth) ui.compatibility.classList.remove("hidden");
   setLinkState("disconnected", "Controls loaded. Power on the StickS3, then tap Connect.");
-  ui.build.textContent = "Web client v0.7 · controls loaded";
+  ui.build.textContent = "Web client v0.8 · controls loaded";
   addLog("Web controls loaded", "success");
 
   // During BLE prototyping, remove offline workers and caches so Bluefy always

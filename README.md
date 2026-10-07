@@ -7,9 +7,10 @@ Web Bluetooth, such as Bluefy; Safari does not expose `navigator.bluetooth`.
 Deployed controller: <https://epcnum7.github.io/RifleHUD-Remote/>
 
 The page sends one command at a time, waits for its matching acknowledgement,
-then requests a current status snapshot. It implements the target, range,
-density-altitude, wind, manual-elevation, and status commands documented in
-`docs/BLE_PROTOCOL.md`. It does not contain ballistic tables or credentials.
+then requests a current status snapshot. Web client v0.8 sends target, range,
+density altitude, and wind through one atomic **Save All** command. Manual
+elevation remains a separate action. It does not contain ballistic tables or
+credentials.
 
 Serve this directory over HTTPS. Plain HTTP works only on `localhost` during
 desktop development because Web Bluetooth requires a secure context. The
@@ -22,7 +23,7 @@ behavior still depends on the host browser.
 2. Install Bluefy on the iPhone and open the deployed HTTPS URL in Bluefy.
 3. Tap Connect and choose `RifleHUD`.
 4. Enter the six-digit PIN shown on the StickS3 if iOS requests it.
-5. Verify Refresh, then target, range, DA, calm wind, and manual elevation.
+5. Verify Refresh, Save All with calm and nonzero wind, and manual elevation.
 6. Restart the HUD and verify that Connect restores the saved values.
 
 The current firmware protocol does not have clear-range or clear-override

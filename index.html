@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
-  <script src="app.js?v=0.7" defer></script>
+  <script src="app.js?v=0.8" defer></script>
 </head>
 <body>
   <main class="shell">
@@ -74,62 +74,51 @@
     <section class="card">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">SHOT</p>
-          <h2>Target and range</h2>
+          <p class="eyebrow">SHOT SETUP</p>
+          <h2>Target, range, and conditions</h2>
         </div>
       </div>
-      <form id="target-form" class="control-row">
-        <label for="target-input">Target ID</label>
-        <div class="input-action">
+      <form id="setup-form">
+        <div class="control-row">
+          <label for="target-input">Target ID</label>
           <input id="target-input" maxlength="11" autocomplete="off" autocapitalize="characters" placeholder="T3" required>
-          <button type="submit" disabled>Save</button>
+          <small>Up to 11 letters, numbers, dashes, or underscores.</small>
         </div>
-        <small>Up to 11 letters, numbers, dashes, or underscores.</small>
-      </form>
-      <form id="range-form" class="control-row">
-        <label for="range-input">Range</label>
-        <div class="input-with-unit input-action">
-          <input id="range-input" type="number" min="1" max="5000" inputmode="numeric" placeholder="491" required>
-          <span>YD</span>
-          <button type="submit" disabled>Set</button>
+        <div class="control-row">
+          <label for="range-input">Range</label>
+          <div class="input-with-unit">
+            <input id="range-input" type="number" min="1" max="5000" inputmode="numeric" placeholder="491" required>
+            <span>YD</span>
+          </div>
+          <small>A changed range clears any manual elevation override.</small>
         </div>
-        <small>A changed range clears any manual elevation override.</small>
-      </form>
-    </section>
-
-    <section class="card">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">CONDITIONS</p>
-          <h2>Atmosphere and wind</h2>
+        <div class="control-row">
+          <label for="da-input">Density altitude</label>
+          <div class="input-with-unit">
+            <input id="da-input" type="number" min="-10000" max="30000" inputmode="numeric" placeholder="3761" required>
+            <span>FT</span>
+          </div>
+          <small>The HUD interpolates between packaged DA tables and uses the nearest endpoint outside their span.</small>
         </div>
-      </div>
-      <form id="da-form" class="control-row">
-        <label for="da-input">Density altitude</label>
-        <div class="input-with-unit input-action">
-          <input id="da-input" type="number" min="-10000" max="30000" inputmode="numeric" placeholder="3761" required>
-          <span>FT</span>
-          <button type="submit" disabled>Save</button>
+        <div class="control-row">
+          <div class="two-field-row">
+            <label>Wind speed
+              <span class="input-with-unit">
+                <input id="wind-speed-input" type="number" min="0" max="20" step="0.1" inputmode="decimal" value="0.0">
+                <span>MPH</span>
+              </span>
+            </label>
+            <label>Wind from
+              <span class="input-with-unit">
+                <input id="wind-from-input" type="number" min="0" max="359.999" step="0.1" inputmode="decimal" value="0">
+                <span>DEG REL</span>
+              </span>
+            </label>
+          </div>
+          <small>Zero or blank speed is calm wind. Direction is required only for nonzero wind and is FROM relative to the shot.</small>
         </div>
-        <small>The HUD interpolates between packaged DA tables and uses the nearest endpoint outside their span.</small>
-      </form>
-      <form id="wind-form" class="control-row">
-        <div class="two-field-row">
-          <label>Wind speed
-            <span class="input-with-unit">
-              <input id="wind-speed-input" type="number" min="0" max="20" step="0.1" inputmode="decimal" value="0.0">
-              <span>MPH</span>
-            </span>
-          </label>
-          <label>Wind from
-            <span class="input-with-unit">
-              <input id="wind-from-input" type="number" min="0" max="359.999" step="0.1" inputmode="decimal" value="0">
-              <span>DEG REL</span>
-            </span>
-          </label>
-        </div>
-        <button type="submit" class="full-width" disabled>Save wind</button>
-        <small>Leave both fields blank for calm wind. Direction is FROM relative to the shot: 0 headwind, 90 from right, 180 tailwind, 270 from left. Validated through 20 mph.</small>
+        <button type="submit" class="primary full-width" disabled>Save All</button>
+        <p class="microcopy">The complete setup is validated and saved as one update. Invalid input changes nothing on the HUD.</p>
       </form>
     </section>
 
@@ -163,7 +152,7 @@
 
     <footer>
       <p>Prototype BLE controller · Settings are saved on the RifleHUD.</p>
-      <p id="build-label">Web client v0.7 &middot; loading controls...</p>
+      <p id="build-label">Web client v0.8 &middot; loading controls...</p>
     </footer>
   </main>
 </body>
