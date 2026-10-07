@@ -29,6 +29,7 @@
       requestedDa: byId("status-requested-da"),
       tableDa: byId("status-table-da"),
       wind: byId("status-wind"),
+      windage: byId("status-windage"),
       rangeState: byId("status-range-state")
     },
     inputs: {
@@ -177,8 +178,9 @@
     ui.fields.requestedDa.textContent = Number.isFinite(status.requestedDaFeet) ? `${status.requestedDaFeet} FT` : "--";
     ui.fields.tableDa.textContent = Number.isFinite(status.tableDaFeet) ? `${status.tableDaFeet} FT` : "--";
     ui.fields.wind.textContent = Number.isFinite(status.windMph)
-      ? `${status.windMph.toFixed(1)} MPH${Number.isFinite(status.windFromDeg) ? ` @ ${status.windFromDeg.toFixed(0)}°T` : ""}`
+      ? `${status.windMph.toFixed(1)} MPH${Number.isFinite(status.windFromDeg) ? ` @ ${status.windFromDeg.toFixed(0)} DEG REL` : ""}`
       : "--";
+    ui.fields.windage.textContent = formatNumber(status.windageMil, 1, " MIL");
     ui.fields.rangeState.textContent = Number.isFinite(status.rangeYards)
       ? (status.rangeSaved ? "SAVED" : "FRESH")
       : "--";
@@ -187,7 +189,7 @@
     if (status.target) ui.inputs.target.value = status.target;
     if (Number.isFinite(status.rangeYards)) ui.inputs.range.value = status.rangeYards;
     if (Number.isFinite(status.requestedDaFeet)) ui.inputs.da.value = status.requestedDaFeet;
-    if (Number.isFinite(status.windMph)) ui.inputs.windSpeed.value = status.windMph.toFixed(1);
+      ? `${status.windMph.toFixed(1)} MPH${Number.isFinite(status.windFromDeg) ? ` @ ${status.windFromDeg.toFixed(0)} DEG REL` : ""}`
     if (Number.isFinite(status.windFromDeg)) ui.inputs.windFrom.value = status.windFromDeg.toFixed(1);
     if (status.elevationSource === "manual" && Number.isFinite(status.elevationMil)) {
       ui.inputs.elevation.value = status.elevationMil.toFixed(2);
@@ -299,7 +301,7 @@
     feet: requireInteger(ui.inputs.da, -10000, 30000, "Density altitude")
   }));
   bindForm("wind-form", () => {
-    const mph = optionalZero(ui.inputs.windSpeed, 0, 150, "Wind speed");
+    const mph = optionalZero(ui.inputs.windSpeed, 0, 20, "Wind speed");
     if (mph > 0 && ui.inputs.windFrom.value.trim() === "") {
       throw new Error("Enter a wind-FROM bearing for nonzero wind");
     }

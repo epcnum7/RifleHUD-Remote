@@ -66,6 +66,7 @@
         <div><dt>Requested DA</dt><dd id="status-requested-da">--</dd></div>
         <div><dt>Table DA</dt><dd id="status-table-da">--</dd></div>
         <div><dt>Wind</dt><dd id="status-wind">--</dd></div>
+        <div><dt>Wind hold</dt><dd id="status-windage">--</dd></div>
         <div><dt>Range state</dt><dd id="status-range-state">--</dd></div>
       </dl>
     </section>
@@ -110,25 +111,25 @@
           <span>FT</span>
           <button type="submit" disabled>Save</button>
         </div>
-        <small>The HUD selects the nearest packaged DA table.</small>
+        <small>The HUD interpolates between packaged DA tables and uses the nearest endpoint outside their span.</small>
       </form>
       <form id="wind-form" class="control-row">
         <div class="two-field-row">
           <label>Wind speed
             <span class="input-with-unit">
-              <input id="wind-speed-input" type="number" min="0" max="150" step="0.1" inputmode="decimal" value="0.0">
+              <input id="wind-speed-input" type="number" min="0" max="20" step="0.1" inputmode="decimal" value="0.0">
               <span>MPH</span>
             </span>
           </label>
           <label>Wind from
             <span class="input-with-unit">
               <input id="wind-from-input" type="number" min="0" max="359.999" step="0.1" inputmode="decimal" value="0">
-              <span>°T</span>
+              <span>DEG REL</span>
             </span>
           </label>
         </div>
         <button type="submit" class="full-width" disabled>Save wind</button>
-        <small>Leave both fields blank for calm wind (0.0 mph). For nonzero wind, direction is the true-north bearing the wind comes from. Wind hold is not calculated yet.</small>
+        <small>Leave both fields blank for calm wind. Direction is FROM relative to the shot: 0 headwind, 90 from right, 180 tailwind, 270 from left. Validated through 20 mph.</small>
       </form>
     </section>
 
@@ -162,7 +163,7 @@
 
     <footer>
       <p>Prototype BLE controller · Settings are saved on the RifleHUD.</p>
-      <p id="build-label">Web client v0.2</p>
+      <p id="build-label">Web client v0.3</p>
     </footer>
   </main>
 </body>
