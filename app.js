@@ -19,6 +19,9 @@
     connect: byId("connect-button"),
     disconnect: byId("disconnect-button"),
     refresh: byId("refresh-button"),
+    kiloProbe: byId("kilo-probe-button"),
+    kiloStatus: byId("kilo-status"),
+    kiloDetail: byId("kilo-detail"),
     log: byId("activity-log"),
     build: byId("build-label"),
     offlineNotice: byId("offline-notice"),
@@ -57,6 +60,7 @@
   const pendingAcks = new Map();
   let pendingStatus = null;
   let pendingPlan = null;
+  let pendingKilo = null;
 
   function addLog(message, kind = "") {
     const item = document.createElement("li");
@@ -75,6 +79,7 @@
     ui.connect.disabled = connected || busy;
     ui.disconnect.disabled = !connected;
     ui.refresh.disabled = !connected;
+    ui.kiloProbe.disabled = !connected;
     document.querySelectorAll("form button[type='submit']").forEach((button) => {
       button.disabled = !connected;
     });
@@ -154,6 +159,23 @@
     }
   }
 
+  async function fetchKiloStatus() {
+    if (pendingKilo) return pendingKilo.promise;
+    let resolveKilo;
+    let rejectKilo;
+    const promise = new Promise((resolve, reject) => {
+      resolveKilo = resolve;
+      rejectKilo = reject;
+    });
+    pendingKilo = { promise, resolve: resolveKilo, reject: rejectKilo };
+    try {
+      await writeJson({ type: "kilo_status", seq: nextSequence() });
+      return await Promise.race([promise, timeoutPromise("KILO status")]);
+    } finally {
+      pendingKilo = null;
+    }
+  }
+
   function enqueue(action) {
     operationQueue = operationQueue
       .catch(() => undefined)
@@ -183,6 +205,7 @@
         target: message.id,
         rangeYards: message.r,
         rangeSaved: message.sv === 1,
+        rangeSource: message.rs === "b" ? "binocular" : message.rs === "m" ? "manual" : undefined,
         requestedDaFeet: message.da,
         tableDaFeet: message.td,
         elevationMil: message.e,
@@ -201,6 +224,11 @@
     if (message.t === "p") {
       renderPlan(message);
       pendingPlan?.resolve(message);
+      return;
+    }
+    if (message.t === "k") {
+      renderKiloStatus(message);
+      pendingKilo?.resolve(message);
       return;
     }
     if (typeof message.ok === "boolean" && Number.isInteger(message.seq)) {
@@ -227,7 +255,7 @@
       : "--";
     ui.fields.windage.textContent = formatNumber(status.windageMil, 1, " MIL");
     ui.fields.rangeState.textContent = Number.isFinite(status.rangeYards)
-      ? (status.rangeSaved ? "SAVED" : "FRESH")
+      ? (status.rangeSource === "binocular" ? "BINOCULAR" : status.rangeSaved ? "SAVED" : "MANUAL")
       : "--";
     ui.source.textContent = status.elevationSource ? status.elevationSource.toUpperCase() : "NO SOLUTION";
 
@@ -243,6 +271,22 @@
       ui.inputs.elevation.value = "";
     }
     addLog("Status updated");
+  }
+
+  function renderKiloStatus(status) {
+    const state = String(status.s || "unknown");
+    ui.kiloStatus.textContent = state.replaceAll("_", " ").toUpperCase();
+    const details = [];
+    if (status.name) details.push(`${status.name}${Number.isFinite(status.rssi) ? ` at ${status.rssi} dBm` : ""}`);
+    if (Number.isFinite(status.svc) && status.svc > 0) details.push(`${status.svc} services, ${status.chr || 0} characteristics`);
+    if (Number.isFinite(status.rx) && status.rx > 0) details.push(`${status.rx} captured notifications`);
+    ui.kiloDetail.textContent = details.join(" · ") || {
+      idle: "No discovery run yet.",
+      scanning: "Scanning for the documented K3000BDX device name…",
+      not_found: "No K3000BDX advertisement was found. Confirm ABE/ABX mode and try again.",
+      connect_failed: "The binocular was found but the read-only connection failed.",
+      disconnected: "The binocular link disconnected. Live range remains disabled."
+    }[state] || "Waiting for protocol details.";
   }
 
   function renderPlan(plan) {
@@ -267,6 +311,8 @@
     pendingStatus = null;
     pendingPlan?.reject(new Error(reason));
     pendingPlan = null;
+    pendingKilo?.reject(new Error(reason));
+    pendingKilo = null;
   }
 
   function handleDisconnected() {
@@ -311,6 +357,7 @@
     }
     await fetchStatus();
     await fetchPlan();
+    await fetchKiloStatus();
   }
 
   function disconnect() {
@@ -361,6 +408,16 @@
   ui.refresh.addEventListener("click", () => enqueue(async () => {
     await fetchStatus();
     await fetchPlan();
+    await fetchKiloStatus();
+  }));
+  ui.kiloProbe.addEventListener("click", () => enqueue(async () => {
+    await exchangeCommand({ type: "kilo_probe" });
+    renderKiloStatus({ s: "scanning" });
+    for (let attempt = 0; attempt < 8 && server?.connected; ++attempt) {
+      await new Promise((resolve) => window.setTimeout(resolve, 2000));
+      const status = await fetchKiloStatus();
+      if (!["scanning", "found", "connecting"].includes(status.s)) break;
+    }
   }));
   byId("clear-log-button").addEventListener("click", () => { ui.log.replaceChildren(); });
 
@@ -406,7 +463,7 @@
 
   if (!navigator.bluetooth) ui.compatibility.classList.remove("hidden");
   setLinkState("disconnected", "Controls loaded. Power on the StickS3, then tap Connect.");
-  ui.build.textContent = "Web client v0.9 · controls loaded";
+  ui.build.textContent = "Web client v0.10 · controls loaded";
   addLog("Web controls loaded", "success");
 
   if ("serviceWorker" in navigator) {

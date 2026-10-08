@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
-  <script src="app.js?v=0.9" defer></script>
+  <script src="app.js?v=0.10" defer></script>
 </head>
 <body>
   <main class="shell">
@@ -45,6 +45,21 @@
         <button id="disconnect-button" class="quiet" type="button" disabled>Disconnect</button>
       </div>
       <p class="microcopy">Bluefy will list nearby Bluetooth devices. Choose RifleHUD. If iOS asks for a code, enter the six-digit BLE PIN shown on the display.</p>
+    </section>
+
+    <section class="card" aria-labelledby="kilo-heading">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">EXPERIMENTAL RANGE LINK</p>
+          <h2 id="kilo-heading">SIG KILO3000BDX</h2>
+        </div>
+        <span id="kilo-status" class="source-tag">IDLE</span>
+      </div>
+      <p class="muted">Put the binoculars in ABE/ABX mode and keep them awake. Discovery connects read-only and captures protocol details; it will not feed a range to the HUD until the payload and units are verified.</p>
+      <div class="button-row">
+        <button id="kilo-probe-button" type="button" disabled>Discover KILO</button>
+      </div>
+      <p id="kilo-detail" class="microcopy">No discovery run yet.</p>
     </section>
 
     <section class="card solution-card" aria-labelledby="solution-heading">
@@ -154,7 +169,7 @@
 
     <footer>
       <p>Prototype BLE controller · Settings are saved on the RifleHUD.</p>
-      <p id="build-label">Web client v0.9 &middot; loading controls...</p>
+      <p id="build-label">Web client v0.10 &middot; loading controls...</p>
     </footer>
   </main>
 </body>

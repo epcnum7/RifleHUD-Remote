@@ -1,4 +1,4 @@
-const CACHE_NAME = "riflehud-remote-v9";
+const CACHE_NAME = "riflehud-remote-v10";
 const APP_FILES = ["./", "./index.html", "./styles.css", "./app.js", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", (event) => {
