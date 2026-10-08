@@ -21,6 +21,8 @@
     refresh: byId("refresh-button"),
     log: byId("activity-log"),
     build: byId("build-label"),
+    offlineNotice: byId("offline-notice"),
+    offlineLabel: byId("offline-label"),
     source: byId("solution-source"),
     fields: {
       elevation: byId("status-elevation"),
@@ -34,13 +36,16 @@
       rangeState: byId("status-range-state")
     },
     inputs: {
-      target: byId("target-input"),
-      range: byId("range-input"),
       da: byId("da-input"),
       windSpeed: byId("wind-speed-input"),
       windFrom: byId("wind-from-input"),
       elevation: byId("override-input")
-    }
+    },
+    targetRows: Array.from(document.querySelectorAll(".target-row")).map((row) => ({
+      active: row.querySelector("input[type='radio']"),
+      id: row.querySelector(".target-id"),
+      range: row.querySelector(".target-range")
+    }))
   };
 
   let device = null;
@@ -51,6 +56,7 @@
   let operationQueue = Promise.resolve();
   const pendingAcks = new Map();
   let pendingStatus = null;
+  let pendingPlan = null;
 
   function addLog(message, kind = "") {
     const item = document.createElement("li");
@@ -106,6 +112,7 @@
       if (!reply.ok) throw new Error(reply.error || `${command.type} rejected`);
       addLog(`${command.type} saved`, "success");
       await fetchStatus();
+      if (command.type === "plan" || command.type === "select") await fetchPlan();
       return reply;
     } finally {
       pendingAcks.delete(seq);
@@ -127,6 +134,23 @@
       return await Promise.race([promise, timeoutPromise("status")]);
     } finally {
       pendingStatus = null;
+    }
+  }
+
+  async function fetchPlan() {
+    if (pendingPlan) return pendingPlan.promise;
+    let resolvePlan;
+    let rejectPlan;
+    const promise = new Promise((resolve, reject) => {
+      resolvePlan = resolve;
+      rejectPlan = reject;
+    });
+    pendingPlan = { promise, resolve: resolvePlan, reject: rejectPlan };
+    try {
+      await writeJson({ type: "plan_status", seq: nextSequence() });
+      return await Promise.race([promise, timeoutPromise("target plan")]);
+    } finally {
+      pendingPlan = null;
     }
   }
 
@@ -166,10 +190,17 @@
         elevationSource: message.es === "m" ? "manual" : message.es === "t" ? "table" : undefined,
         windMph: message.ws,
         windFromDeg: message.wf,
-        cantDeg: message.c
+        cantDeg: message.c,
+        activeTarget: message.a,
+        targetCount: message.n
       } : message;
       renderStatus(status);
       pendingStatus?.resolve(status);
+      return;
+    }
+    if (message.t === "p") {
+      renderPlan(message);
+      pendingPlan?.resolve(message);
       return;
     }
     if (typeof message.ok === "boolean" && Number.isInteger(message.seq)) {
@@ -200,8 +231,9 @@
       : "--";
     ui.source.textContent = status.elevationSource ? status.elevationSource.toUpperCase() : "NO SOLUTION";
 
-    if (status.target) ui.inputs.target.value = status.target;
-    if (Number.isFinite(status.rangeYards)) ui.inputs.range.value = status.rangeYards;
+    if (Number.isInteger(status.activeTarget) && ui.targetRows[status.activeTarget]) {
+      ui.targetRows[status.activeTarget].active.checked = true;
+    }
     if (Number.isFinite(status.requestedDaFeet)) ui.inputs.da.value = status.requestedDaFeet;
     if (Number.isFinite(status.windMph)) ui.inputs.windSpeed.value = status.windMph.toFixed(1);
     if (Number.isFinite(status.windFromDeg)) ui.inputs.windFrom.value = status.windFromDeg.toFixed(1);
@@ -213,11 +245,28 @@
     addLog("Status updated");
   }
 
+  function renderPlan(plan) {
+    const targets = Array.isArray(plan.x) ? plan.x : [];
+    ui.targetRows.forEach((row, index) => {
+      const target = targets[index];
+      row.id.value = Array.isArray(target) ? String(target[0] ?? "") : "";
+      row.range.value = Array.isArray(target) && Number.isFinite(Number(target[1]))
+        ? Number(target[1]) : "";
+      row.active.checked = index === Number(plan.a);
+    });
+    if (Number.isFinite(plan.da)) ui.inputs.da.value = plan.da;
+    if (Number.isFinite(plan.ws)) ui.inputs.windSpeed.value = Number(plan.ws).toFixed(1);
+    if (Number.isFinite(plan.wf)) ui.inputs.windFrom.value = Number(plan.wf).toFixed(1);
+    addLog(`Loaded ${targets.length} saved target${targets.length === 1 ? "" : "s"}`);
+  }
+
   function rejectPending(reason) {
     pendingAcks.forEach(({ reject }) => reject(new Error(reason)));
     pendingAcks.clear();
     pendingStatus?.reject(new Error(reason));
     pendingStatus = null;
+    pendingPlan?.reject(new Error(reason));
+    pendingPlan = null;
   }
 
   function handleDisconnected() {
@@ -261,6 +310,7 @@
       // Notifications and commands are sufficient if the initial read is unavailable.
     }
     await fetchStatus();
+    await fetchPlan();
   }
 
   function disconnect() {
@@ -308,22 +358,42 @@
     });
   };
   ui.disconnect.addEventListener("click", disconnect);
-  ui.refresh.addEventListener("click", () => enqueue(fetchStatus));
+  ui.refresh.addEventListener("click", () => enqueue(async () => {
+    await fetchStatus();
+    await fetchPlan();
+  }));
   byId("clear-log-button").addEventListener("click", () => { ui.log.replaceChildren(); });
 
-  bindForm("setup-form", () => {
-    const id = ui.inputs.target.value.trim();
-    if (!/^[A-Za-z0-9_-]{1,11}$/.test(id)) {
-      throw new Error("Target ID must use 1-11 letters, numbers, dashes, or underscores");
-    }
+  bindForm("plan-form", () => {
+    const targets = [];
+    let active = -1;
+    let sawEmpty = false;
+    ui.targetRows.forEach((row, index) => {
+      const id = row.id.value.trim();
+      const rangeText = row.range.value.trim();
+      if (!id && !rangeText) {
+        sawEmpty = true;
+        return;
+      }
+      if (sawEmpty) throw new Error("Fill target rows consecutively without gaps");
+      if (!/^[A-Za-z0-9_-]{1,11}$/.test(id)) {
+        throw new Error(`Target ${index + 1} ID must use 1-11 letters, numbers, dashes, or underscores`);
+      }
+      const yards = requireInteger(row.range, 1, 5000, `Target ${index + 1} range`);
+      if (targets.some((target) => target[0] === id)) throw new Error(`Target ID ${id} is duplicated`);
+      if (row.active.checked) active = targets.length;
+      targets.push([id, yards]);
+    });
+    if (targets.length === 0) throw new Error("Enter at least one target");
+    if (active < 0) throw new Error("Select the active target using its USE button");
     const mph = optionalZero(ui.inputs.windSpeed, 0, 20, "Wind speed");
     if (mph > 0 && ui.inputs.windFrom.value.trim() === "") {
       throw new Error("Enter a wind-FROM bearing for nonzero wind");
     }
     return {
-      type: "setup",
-      target: id,
-      yards: requireInteger(ui.inputs.range, 1, 5000, "Range"),
+      type: "plan",
+      x: targets,
+      a: active,
       feet: requireInteger(ui.inputs.da, -10000, 30000, "Density altitude"),
       mph,
       from: optionalZero(ui.inputs.windFrom, 0, 359.999, "Wind bearing")
@@ -336,19 +406,25 @@
 
   if (!navigator.bluetooth) ui.compatibility.classList.remove("hidden");
   setLinkState("disconnected", "Controls loaded. Power on the StickS3, then tap Connect.");
-  ui.build.textContent = "Web client v0.8 · controls loaded";
+  ui.build.textContent = "Web client v0.9 · controls loaded";
   addLog("Web controls loaded", "success");
 
-  // During BLE prototyping, remove offline workers and caches so Bluefy always
-  // receives the current connection code instead of retaining an older build.
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.getRegistrations()
-      .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister())))
-      .catch(() => undefined);
-  }
-  if ("caches" in window) {
-    caches.keys()
-      .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
-      .catch(() => undefined);
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js")
+        .then(() => navigator.serviceWorker.ready)
+        .then(() => {
+          ui.offlineNotice.classList.add("ready");
+          ui.offlineLabel.textContent = "Offline access ready";
+        })
+        .catch((error) => {
+          ui.offlineNotice.classList.add("error");
+          ui.offlineLabel.textContent = "Offline cache unavailable";
+          addLog(`Offline cache: ${error.message || error}`, "error");
+        });
+    });
+  } else {
+    ui.offlineNotice.classList.add("error");
+    ui.offlineLabel.textContent = "Offline cache unsupported in this browser";
   }
 })();

@@ -119,6 +119,31 @@ h2 { margin-bottom: 0; font-size: 1.05rem; }
 .notice a { color: white; }
 .hidden { display: none; }
 .muted, small, footer { color: var(--muted); }
+
+.target-plan-header,
+.target-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) minmax(92px, .75fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.target-plan-header {
+  padding: 0 4px 7px;
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+.target-plan { display: grid; gap: 8px; margin-bottom: 12px; }
+.target-row { padding: 9px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.025); }
+.target-row:focus-within { border-color: var(--cyan); }
+.target-row input[type="radio"] { width: 22px; height: 22px; margin: auto; accent-color: var(--cyan); }
+
+#offline-notice { display: flex; flex-direction: column; gap: 3px; }
+#offline-notice.ready strong { color: var(--lime); }
+#offline-notice.error strong { color: var(--red); }
 .muted { margin: 0.35rem 0 0; }
 .microcopy { margin: 0.7rem 0 0; color: var(--muted); font-size: 0.76rem; }
 .button-row { flex-wrap: wrap; gap: 0.5rem; margin-top: 0.9rem; }
