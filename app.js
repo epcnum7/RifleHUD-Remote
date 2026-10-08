@@ -115,7 +115,7 @@
       await writeJson({ ...command, seq });
       const reply = await Promise.race([ack, timeoutPromise(command.type)]);
       if (!reply.ok) throw new Error(reply.error || `${command.type} rejected`);
-      addLog(`${command.type} saved`, "success");
+      addLog(command.type === "kilo_probe" ? "KILO discovery started" : `${command.type} saved`, "success");
       await fetchStatus();
       if (command.type === "plan" || command.type === "select") await fetchPlan();
       return reply;
