@@ -44,8 +44,9 @@
       windFrom: byId("wind-from-input"),
       elevation: byId("override-input")
     },
+    modeInputs: Array.from(document.querySelectorAll("input[name='hud-mode']")),
     targetRows: Array.from(document.querySelectorAll(".target-row")).map((row) => ({
-      active: row.querySelector("input[type='radio']"),
+      selected: row.querySelector(".target-show"),
       id: row.querySelector(".target-id"),
       range: row.querySelector(".target-range")
     }))
@@ -215,7 +216,8 @@
         windFromDeg: message.wf,
         cantDeg: message.c,
         activeTarget: message.a,
-        targetCount: message.n
+        targetCount: message.n,
+        mode: message.mode === "a" ? "auto" : "card"
       } : message;
       renderStatus(status);
       pendingStatus?.resolve(status);
@@ -259,8 +261,9 @@
       : "--";
     ui.source.textContent = status.elevationSource ? status.elevationSource.toUpperCase() : "NO SOLUTION";
 
-    if (Number.isInteger(status.activeTarget) && ui.targetRows[status.activeTarget]) {
-      ui.targetRows[status.activeTarget].active.checked = true;
+    if (status.mode) {
+      const modeInput = ui.modeInputs.find((input) => input.value === status.mode);
+      if (modeInput) modeInput.checked = true;
     }
     if (Number.isFinite(status.requestedDaFeet)) ui.inputs.da.value = status.requestedDaFeet;
     if (Number.isFinite(status.windMph)) ui.inputs.windSpeed.value = status.windMph.toFixed(1);
@@ -280,10 +283,11 @@
     if (status.name) details.push(`${status.name}${Number.isFinite(status.rssi) ? ` at ${status.rssi} dBm` : ""}`);
     if (Number.isFinite(status.svc) && status.svc > 0) details.push(`${status.svc} services, ${status.chr || 0} characteristics`);
     if (Number.isFinite(status.rx) && status.rx > 0) details.push(`${status.rx} captured notifications`);
+    if (Number.isFinite(status.adv)) details.push(`${status.adv} advertisements seen`);
     ui.kiloDetail.textContent = details.join(" · ") || {
       idle: "No discovery run yet.",
-      scanning: "Scanning for the documented K3000BDX device name…",
-      not_found: "No K3000BDX advertisement was found. Confirm ABE/ABX mode and try again.",
+      scanning: "Scanning for the K3000BDX/K3000BE device name…",
+      not_found: "No matching KILO advertisement was found. Confirm ABE/ABX mode and try again.",
       connect_failed: "The binocular was found but the read-only connection failed.",
       disconnected: "The binocular link disconnected. Live range remains disabled."
     }[state] || "Waiting for protocol details.";
@@ -291,12 +295,18 @@
 
   function renderPlan(plan) {
     const targets = Array.isArray(plan.x) ? plan.x : [];
+    const shown = Number.isInteger(Number(plan.show))
+      ? Number(plan.show)
+      : (targets.length > 0 ? (1 << targets.length) - 1 : 0);
+    const mode = plan.mode === "auto" ? "auto" : "card";
+    const modeInput = ui.modeInputs.find((input) => input.value === mode);
+    if (modeInput) modeInput.checked = true;
     ui.targetRows.forEach((row, index) => {
       const target = targets[index];
       row.id.value = Array.isArray(target) ? String(target[0] ?? "") : "";
       row.range.value = Array.isArray(target) && Number.isFinite(Number(target[1]))
         ? Number(target[1]) : "";
-      row.active.checked = index === Number(plan.a);
+      row.selected.checked = (shown & (1 << index)) !== 0;
     });
     if (Number.isFinite(plan.da)) ui.inputs.da.value = plan.da;
     if (Number.isFinite(plan.ws)) ui.inputs.windSpeed.value = Number(plan.ws).toFixed(1);
@@ -423,7 +433,7 @@
 
   bindForm("plan-form", () => {
     const targets = [];
-    let active = -1;
+    let shown = 0;
     let sawEmpty = false;
     ui.targetRows.forEach((row, index) => {
       const id = row.id.value.trim();
@@ -438,17 +448,27 @@
       }
       const yards = requireInteger(row.range, 1, 5000, `Target ${index + 1} range`);
       if (targets.some((target) => target[0] === id)) throw new Error(`Target ID ${id} is duplicated`);
-      if (row.active.checked) active = targets.length;
+      if (row.selected.checked) shown |= 1 << targets.length;
       targets.push([id, yards]);
     });
-    if (targets.length === 0) throw new Error("Enter at least one target");
-    if (active < 0) throw new Error("Select the active target using its USE button");
+    const mode = ui.modeInputs.find((input) => input.checked)?.value || "card";
+    if (mode === "card" && targets.length === 0) {
+      throw new Error("Enter at least one target for DOPE Card mode");
+    }
+    if (mode === "card" && shown === 0) {
+      throw new Error("Check at least one target to show on the DOPE Card");
+    }
+    const active = shown === 0
+      ? 0
+      : Math.trunc(Math.log2(shown & -shown));
     const mph = optionalZero(ui.inputs.windSpeed, 0, 20, "Wind speed");
     if (mph > 0 && ui.inputs.windFrom.value.trim() === "") {
       throw new Error("Enter a wind-FROM bearing for nonzero wind");
     }
     return {
       type: "plan",
+      mode,
+      show: shown,
       x: targets,
       a: active,
       feet: requireInteger(ui.inputs.da, -10000, 30000, "Density altitude"),
@@ -463,7 +483,7 @@
 
   if (!navigator.bluetooth) ui.compatibility.classList.remove("hidden");
   setLinkState("disconnected", "Controls loaded. Power on the StickS3, then tap Connect.");
-  ui.build.textContent = "Web client v0.10 · controls loaded";
+  ui.build.textContent = "Web client v0.11 · controls loaded";
   addLog("Web controls loaded", "success");
 
   if ("serviceWorker" in navigator) {

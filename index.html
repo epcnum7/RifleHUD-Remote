@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
-  <script src="app.js?v=0.10" defer></script>
+  <script src="app.js?v=0.11" defer></script>
 </head>
 <body>
   <main class="shell">
@@ -99,16 +99,21 @@
         </div>
       </div>
       <form id="plan-form">
-        <div class="target-plan-header" aria-hidden="true"><span>USE</span><span>TARGET ID</span><span>RANGE (YD)</span></div>
+        <fieldset class="mode-picker">
+          <legend>Display mode</legend>
+          <label><input type="radio" name="hud-mode" value="card" checked><span><strong>DOPE Card</strong><small>Show the checked saved targets together.</small></span></label>
+          <label><input type="radio" name="hud-mode" value="auto"><span><strong>Auto</strong><small>Show one hold and update it from each verified binocular range.</small></span></label>
+        </fieldset>
+        <div class="target-plan-header" aria-hidden="true"><span>SHOW</span><span>TARGET ID</span><span>RANGE (YD)</span></div>
         <div id="target-plan" class="target-plan">
-          <div class="target-row"><input type="radio" name="active-target" value="0" aria-label="Use target 1" checked><input class="target-id" maxlength="11" autocomplete="off" placeholder="T1"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="300"></div>
-          <div class="target-row"><input type="radio" name="active-target" value="1" aria-label="Use target 2"><input class="target-id" maxlength="11" autocomplete="off" placeholder="T2"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="450"></div>
-          <div class="target-row"><input type="radio" name="active-target" value="2" aria-label="Use target 3"><input class="target-id" maxlength="11" autocomplete="off" placeholder="T3"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="600"></div>
-          <div class="target-row"><input type="radio" name="active-target" value="3" aria-label="Use target 4"><input class="target-id" maxlength="11" autocomplete="off" placeholder="T4"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="750"></div>
-          <div class="target-row"><input type="radio" name="active-target" value="4" aria-label="Use target 5"><input class="target-id" maxlength="11" autocomplete="off" placeholder="T5"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="900"></div>
-          <div class="target-row"><input type="radio" name="active-target" value="5" aria-label="Use target 6"><input class="target-id" maxlength="11" autocomplete="off" placeholder="T6"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="1050"></div>
+          <div class="target-row"><input class="target-show" type="checkbox" aria-label="Show target 1" checked><input class="target-id" maxlength="11" autocomplete="off" placeholder="T1"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="300"></div>
+          <div class="target-row"><input class="target-show" type="checkbox" aria-label="Show target 2" checked><input class="target-id" maxlength="11" autocomplete="off" placeholder="T2"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="450"></div>
+          <div class="target-row"><input class="target-show" type="checkbox" aria-label="Show target 3" checked><input class="target-id" maxlength="11" autocomplete="off" placeholder="T3"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="600"></div>
+          <div class="target-row"><input class="target-show" type="checkbox" aria-label="Show target 4" checked><input class="target-id" maxlength="11" autocomplete="off" placeholder="T4"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="750"></div>
+          <div class="target-row"><input class="target-show" type="checkbox" aria-label="Show target 5" checked><input class="target-id" maxlength="11" autocomplete="off" placeholder="T5"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="900"></div>
+          <div class="target-row"><input class="target-show" type="checkbox" aria-label="Show target 6" checked><input class="target-id" maxlength="11" autocomplete="off" placeholder="T6"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="1050"></div>
         </div>
-        <small>Fill consecutive rows. Leave unused rows blank and select the target that should appear on the shooting HUD.</small>
+        <small>Fill consecutive rows. In DOPE Card mode, check one to six targets to place on the display. Auto mode ignores saved target ranges and waits for the binocular.</small>
         <div class="control-row">
           <label for="da-input">Density altitude</label>
           <div class="input-with-unit">
@@ -134,8 +139,8 @@
           </div>
           <small>Zero or blank speed is calm wind. Direction is required only for nonzero wind and is FROM relative to the shot.</small>
         </div>
-        <button type="submit" class="primary full-width" disabled>Save Target Plan</button>
-        <p class="microcopy">Targets, active selection, DA, and wind are validated and saved atomically. Invalid input changes nothing.</p>
+        <button type="submit" class="primary full-width" disabled>Save Mode and Plan</button>
+        <p class="microcopy">Mode, displayed targets, DA, and wind are validated and saved atomically. Invalid input changes nothing.</p>
       </form>
     </section>
 
@@ -169,7 +174,7 @@
 
     <footer>
       <p>Prototype BLE controller · Settings are saved on the RifleHUD.</p>
-      <p id="build-label">Web client v0.10 &middot; loading controls...</p>
+      <p id="build-label">Web client v0.11 &middot; loading controls...</p>
     </footer>
   </main>
 </body>
