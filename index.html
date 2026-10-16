@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
-  <script src="app.js?v=0.11" defer></script>
+  <script src="app.js?v=0.14" defer></script>
 </head>
 <body>
   <main class="shell">
@@ -44,22 +44,7 @@
         <button id="refresh-button" type="button" disabled>Refresh</button>
         <button id="disconnect-button" class="quiet" type="button" disabled>Disconnect</button>
       </div>
-      <p class="microcopy">Bluefy will list nearby Bluetooth devices. Choose RifleHUD. If iOS asks for a code, enter the six-digit BLE PIN shown on the display.</p>
-    </section>
-
-    <section class="card" aria-labelledby="kilo-heading">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">EXPERIMENTAL RANGE LINK</p>
-          <h2 id="kilo-heading">SIG KILO3000BDX</h2>
-        </div>
-        <span id="kilo-status" class="source-tag">IDLE</span>
-      </div>
-      <p class="muted">Put the binoculars in ABE/ABX mode and keep them awake. Discovery connects read-only and captures protocol details; it will not feed a range to the HUD until the payload and units are verified.</p>
-      <div class="button-row">
-        <button id="kilo-probe-button" type="button" disabled>Discover KILO</button>
-      </div>
-      <p id="kilo-detail" class="microcopy">No discovery run yet.</p>
+      <p class="microcopy">The chooser shows RifleHUD only. If iOS asks for a code, enter the six-digit PIN on the Stick. That code stays after a restart.</p>
     </section>
 
     <section class="card solution-card" aria-labelledby="solution-heading">
@@ -102,18 +87,18 @@
         <fieldset class="mode-picker">
           <legend>Display mode</legend>
           <label><input type="radio" name="hud-mode" value="card" checked><span><strong>DOPE Card</strong><small>Show the checked saved targets together.</small></span></label>
-          <label><input type="radio" name="hud-mode" value="auto"><span><strong>Auto</strong><small>Show one hold and update it from each verified binocular range.</small></span></label>
+          <label><input type="radio" name="hud-mode" value="auto"><span><strong>Auto</strong><small>One hold, updated by the binoculars. Hold the side button on the Stick to switch modes.</small></span></label>
         </fieldset>
         <div class="target-plan-header" aria-hidden="true"><span>SHOW</span><span>TARGET ID</span><span>RANGE (YD)</span></div>
         <div id="target-plan" class="target-plan">
-          <div class="target-row"><input class="target-show" type="checkbox" aria-label="Show target 1" checked><input class="target-id" maxlength="11" autocomplete="off" placeholder="T1"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="300"></div>
-          <div class="target-row"><input class="target-show" type="checkbox" aria-label="Show target 2" checked><input class="target-id" maxlength="11" autocomplete="off" placeholder="T2"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="450"></div>
-          <div class="target-row"><input class="target-show" type="checkbox" aria-label="Show target 3" checked><input class="target-id" maxlength="11" autocomplete="off" placeholder="T3"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="600"></div>
-          <div class="target-row"><input class="target-show" type="checkbox" aria-label="Show target 4" checked><input class="target-id" maxlength="11" autocomplete="off" placeholder="T4"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="750"></div>
-          <div class="target-row"><input class="target-show" type="checkbox" aria-label="Show target 5" checked><input class="target-id" maxlength="11" autocomplete="off" placeholder="T5"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="900"></div>
-          <div class="target-row"><input class="target-show" type="checkbox" aria-label="Show target 6" checked><input class="target-id" maxlength="11" autocomplete="off" placeholder="T6"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="1050"></div>
+          <div class="target-row"><input class="target-show" type="checkbox" aria-label="Show target 1"><input class="target-id" maxlength="11" autocomplete="off" value="T1"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="Yards"></div>
+          <div class="target-row"><input class="target-show" type="checkbox" aria-label="Show target 2"><input class="target-id" maxlength="11" autocomplete="off" value="T2"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="Yards"></div>
+          <div class="target-row"><input class="target-show" type="checkbox" aria-label="Show target 3"><input class="target-id" maxlength="11" autocomplete="off" value="T3"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="Yards"></div>
+          <div class="target-row"><input class="target-show" type="checkbox" aria-label="Show target 4"><input class="target-id" maxlength="11" autocomplete="off" value="T4"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="Yards"></div>
+          <div class="target-row"><input class="target-show" type="checkbox" aria-label="Show target 5"><input class="target-id" maxlength="11" autocomplete="off" value="T5"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="Yards"></div>
+          <div class="target-row"><input class="target-show" type="checkbox" aria-label="Show target 6"><input class="target-id" maxlength="11" autocomplete="off" value="T6"><input class="target-range" type="number" min="1" max="5000" inputmode="numeric" placeholder="Yards"></div>
         </div>
-        <small>Fill consecutive rows. In DOPE Card mode, check one to six targets to place on the display. Auto mode ignores saved target ranges and waits for the binocular.</small>
+        <small>Check a row and enter its range. Unchecked rows are left off the card.</small>
         <div class="control-row">
           <label for="da-input">Density altitude</label>
           <div class="input-with-unit">
@@ -174,7 +159,7 @@
 
     <footer>
       <p>Prototype BLE controller · Settings are saved on the RifleHUD.</p>
-      <p id="build-label">Web client v0.11 &middot; loading controls...</p>
+      <p id="build-label">Web client v0.14 &middot; loading controls...</p>
     </footer>
   </main>
 </body>

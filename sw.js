@@ -1,9 +1,18 @@
-const CACHE_NAME = "riflehud-remote-v11";
-const APP_FILES = ["./", "./index.html", "./styles.css", "./app.js", "./manifest.webmanifest", "./icon.svg"];
+const CACHE_NAME = "riflehud-remote-v14";
+const APP_FILES = ["./", "./index.html", "./styles.css", "./app.js", "./app.js?v=0.14", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_FILES)));
-  self.skipWaiting();
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    await Promise.all(APP_FILES.map(async (url) => {
+      try {
+        await cache.add(url);
+      } catch (error) {
+        // One missing file must not leave the whole controller uncached.
+      }
+    }));
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener("activate", (event) => {
@@ -18,15 +27,25 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET" ||
       new URL(event.request.url).origin !== self.location.origin) return;
   if (event.request.mode === "navigate") {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put("./index.html", copy));
-          return response;
-        })
-        .catch(() => caches.match("./index.html"))
-    );
+    const update = fetch(event.request).then(async (response) => {
+      if (response && response.ok) {
+        const cache = await caches.open(CACHE_NAME);
+        await cache.put("./index.html", response.clone());
+      }
+      return response;
+    }).catch(() => null);
+    event.waitUntil(update.then(() => undefined));
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE_NAME);
+      const cached = await cache.match("./index.html");
+      if (cached) return cached;
+      const response = await update;
+      if (response) return response;
+      return new Response("Open RifleHUD Remote once while online, then reopen this same address.", {
+        status: 503,
+        headers: { "Content-Type": "text/plain" }
+      });
+    })());
     return;
   }
   event.respondWith(

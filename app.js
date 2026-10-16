@@ -19,9 +19,6 @@
     connect: byId("connect-button"),
     disconnect: byId("disconnect-button"),
     refresh: byId("refresh-button"),
-    kiloProbe: byId("kilo-probe-button"),
-    kiloStatus: byId("kilo-status"),
-    kiloDetail: byId("kilo-detail"),
     log: byId("activity-log"),
     build: byId("build-label"),
     offlineNotice: byId("offline-notice"),
@@ -61,7 +58,6 @@
   const pendingAcks = new Map();
   let pendingStatus = null;
   let pendingPlan = null;
-  let pendingKilo = null;
 
   function addLog(message, kind = "") {
     const item = document.createElement("li");
@@ -80,7 +76,6 @@
     ui.connect.disabled = connected || busy;
     ui.disconnect.disabled = !connected;
     ui.refresh.disabled = !connected;
-    ui.kiloProbe.disabled = !connected;
     document.querySelectorAll("form button[type='submit']").forEach((button) => {
       button.disabled = !connected;
     });
@@ -116,7 +111,7 @@
       await writeJson({ ...command, seq });
       const reply = await Promise.race([ack, timeoutPromise(command.type)]);
       if (!reply.ok) throw new Error(reply.error || `${command.type} rejected`);
-      addLog(command.type === "kilo_probe" ? "KILO discovery started" : `${command.type} saved`, "success");
+      addLog(`${command.type} saved`, "success");
       await fetchStatus();
       if (command.type === "plan" || command.type === "select") await fetchPlan();
       return reply;
@@ -157,23 +152,6 @@
       return await Promise.race([promise, timeoutPromise("target plan")]);
     } finally {
       pendingPlan = null;
-    }
-  }
-
-  async function fetchKiloStatus() {
-    if (pendingKilo) return pendingKilo.promise;
-    let resolveKilo;
-    let rejectKilo;
-    const promise = new Promise((resolve, reject) => {
-      resolveKilo = resolve;
-      rejectKilo = reject;
-    });
-    pendingKilo = { promise, resolve: resolveKilo, reject: rejectKilo };
-    try {
-      await writeJson({ type: "kilo_status", seq: nextSequence() });
-      return await Promise.race([promise, timeoutPromise("KILO status")]);
-    } finally {
-      pendingKilo = null;
     }
   }
 
@@ -228,11 +206,7 @@
       pendingPlan?.resolve(message);
       return;
     }
-    if (message.t === "k") {
-      renderKiloStatus(message);
-      pendingKilo?.resolve(message);
-      return;
-    }
+    if (message.t === "k") return;
     if (typeof message.ok === "boolean" && Number.isInteger(message.seq)) {
       const pending = pendingAcks.get(message.seq);
       if (pending) pending.resolve(message);
@@ -245,9 +219,15 @@
     return Number.isFinite(value) ? `${Number(value).toFixed(places)}${suffix}` : "--";
   }
 
+  function formatYards(value) {
+    if (!Number.isFinite(value)) return "--";
+    const rounded = Math.round(value * 10) / 10;
+    return Number.isInteger(rounded) ? `${rounded.toFixed(0)} YD` : `${rounded.toFixed(1)} YD`;
+  }
+
   function renderStatus(status) {
     ui.fields.target.textContent = status.target || "--";
-    ui.fields.range.textContent = Number.isFinite(status.rangeYards) ? `${status.rangeYards} YD` : "--";
+    ui.fields.range.textContent = formatYards(status.rangeYards);
     ui.fields.elevation.textContent = formatNumber(status.elevationMil, 2, " MIL");
     ui.fields.cant.textContent = formatNumber(status.cantDeg, 1, "°");
     ui.fields.requestedDa.textContent = Number.isFinite(status.requestedDaFeet) ? `${status.requestedDaFeet} FT` : "--";
@@ -276,23 +256,6 @@
     addLog("Status updated");
   }
 
-  function renderKiloStatus(status) {
-    const state = String(status.s || "unknown");
-    ui.kiloStatus.textContent = state.replaceAll("_", " ").toUpperCase();
-    const details = [];
-    if (status.name) details.push(`${status.name}${Number.isFinite(status.rssi) ? ` at ${status.rssi} dBm` : ""}`);
-    if (Number.isFinite(status.svc) && status.svc > 0) details.push(`${status.svc} services, ${status.chr || 0} characteristics`);
-    if (Number.isFinite(status.rx) && status.rx > 0) details.push(`${status.rx} captured notifications`);
-    if (Number.isFinite(status.adv)) details.push(`${status.adv} advertisements seen`);
-    ui.kiloDetail.textContent = details.join(" · ") || {
-      idle: "No discovery run yet.",
-      scanning: "Scanning for the K3000BDX/K3000BE device name…",
-      not_found: "No matching KILO advertisement was found. Confirm ABE/ABX mode and try again.",
-      connect_failed: "The binocular was found but the read-only connection failed.",
-      disconnected: "The binocular link disconnected. Live range remains disabled."
-    }[state] || "Waiting for protocol details.";
-  }
-
   function renderPlan(plan) {
     const targets = Array.isArray(plan.x) ? plan.x : [];
     const shown = Number.isInteger(Number(plan.show))
@@ -301,12 +264,34 @@
     const mode = plan.mode === "auto" ? "auto" : "card";
     const modeInput = ui.modeInputs.find((input) => input.value === mode);
     if (modeInput) modeInput.checked = true;
+    const used = new Set();
+    targets.forEach((target) => {
+      if (Array.isArray(target) && String(target[0] ?? "").trim() !== "") {
+        used.add(String(target[0]));
+      }
+    });
     ui.targetRows.forEach((row, index) => {
       const target = targets[index];
-      row.id.value = Array.isArray(target) ? String(target[0] ?? "") : "";
-      row.range.value = Array.isArray(target) && Number.isFinite(Number(target[1]))
-        ? Number(target[1]) : "";
-      row.selected.checked = (shown & (1 << index)) !== 0;
+      const hasTarget = Array.isArray(target) && String(target[0] ?? "").trim() !== "";
+      if (hasTarget) {
+        row.id.value = String(target[0]);
+        row.range.value = Number.isFinite(Number(target[1])) ? Number(target[1]) : "";
+        row.selected.checked = (shown & (1 << index)) !== 0;
+        return;
+      }
+      let fallback = `T${index + 1}`;
+      if (used.has(fallback)) {
+        for (let number = 1; number <= ui.targetRows.length; number += 1) {
+          if (!used.has(`T${number}`)) {
+            fallback = `T${number}`;
+            break;
+          }
+        }
+      }
+      used.add(fallback);
+      row.id.value = fallback;
+      row.range.value = "";
+      row.selected.checked = false;
     });
     if (Number.isFinite(plan.da)) ui.inputs.da.value = plan.da;
     if (Number.isFinite(plan.ws)) ui.inputs.windSpeed.value = Number(plan.ws).toFixed(1);
@@ -321,8 +306,6 @@
     pendingStatus = null;
     pendingPlan?.reject(new Error(reason));
     pendingPlan = null;
-    pendingKilo?.reject(new Error(reason));
-    pendingKilo = null;
   }
 
   function handleDisconnected() {
@@ -334,6 +317,24 @@
     addLog("Disconnected", "error");
   }
 
+  async function chooseRifleHud() {
+    if (navigator.bluetooth.getDevices) {
+      try {
+        const devices = await navigator.bluetooth.getDevices();
+        const known = devices.find((item) => item.name === "RifleHUD");
+        if (known) return known;
+      } catch {
+        // The picker is the fallback when a previous grant cannot be read.
+      }
+    }
+    // A name filter is the only control the page has over the chooser.
+    // Bluefy cannot sort the iOS Settings Bluetooth list.
+    return navigator.bluetooth.requestDevice({
+      filters: [{ name: "RifleHUD" }, { namePrefix: "RifleHUD" }],
+      optionalServices: [UUIDS.service]
+    });
+  }
+
   async function connect() {
     if (!navigator.bluetooth) {
       ui.compatibility.classList.remove("hidden");
@@ -341,10 +342,7 @@
     }
     addLog("Opening Bluetooth device chooser");
     setLinkState("connecting", "Opening the Bluetooth device list. Choose RifleHUD.");
-    device = await navigator.bluetooth.requestDevice({
-      acceptAllDevices: true,
-      optionalServices: [UUIDS.service]
-    });
+    device = await chooseRifleHud();
     device.addEventListener("gattserverdisconnected", handleDisconnected);
     ui.detail.textContent = "Opening encrypted RifleHUD service…";
     server = await device.gatt.connect();
@@ -367,7 +365,6 @@
     }
     await fetchStatus();
     await fetchPlan();
-    await fetchKiloStatus();
   }
 
   function disconnect() {
@@ -418,37 +415,21 @@
   ui.refresh.addEventListener("click", () => enqueue(async () => {
     await fetchStatus();
     await fetchPlan();
-    await fetchKiloStatus();
-  }));
-  ui.kiloProbe.addEventListener("click", () => enqueue(async () => {
-    await exchangeCommand({ type: "kilo_probe" });
-    renderKiloStatus({ s: "scanning" });
-    for (let attempt = 0; attempt < 8 && server?.connected; ++attempt) {
-      await new Promise((resolve) => window.setTimeout(resolve, 2000));
-      const status = await fetchKiloStatus();
-      if (!["scanning", "found", "connecting"].includes(status.s)) break;
-    }
   }));
   byId("clear-log-button").addEventListener("click", () => { ui.log.replaceChildren(); });
 
   bindForm("plan-form", () => {
     const targets = [];
     let shown = 0;
-    let sawEmpty = false;
     ui.targetRows.forEach((row, index) => {
+      if (!row.selected.checked) return;
       const id = row.id.value.trim();
-      const rangeText = row.range.value.trim();
-      if (!id && !rangeText) {
-        sawEmpty = true;
-        return;
-      }
-      if (sawEmpty) throw new Error("Fill target rows consecutively without gaps");
       if (!/^[A-Za-z0-9_-]{1,11}$/.test(id)) {
         throw new Error(`Target ${index + 1} ID must use 1-11 letters, numbers, dashes, or underscores`);
       }
       const yards = requireInteger(row.range, 1, 5000, `Target ${index + 1} range`);
       if (targets.some((target) => target[0] === id)) throw new Error(`Target ID ${id} is duplicated`);
-      if (row.selected.checked) shown |= 1 << targets.length;
+      shown |= 1 << targets.length;
       targets.push([id, yards]);
     });
     const mode = ui.modeInputs.find((input) => input.checked)?.value || "card";
@@ -483,7 +464,7 @@
 
   if (!navigator.bluetooth) ui.compatibility.classList.remove("hidden");
   setLinkState("disconnected", "Controls loaded. Power on the StickS3, then tap Connect.");
-  ui.build.textContent = "Web client v0.11 · controls loaded";
+  ui.build.textContent = "Web client v0.14 · controls loaded";
   addLog("Web controls loaded", "success");
 
   if ("serviceWorker" in navigator) {

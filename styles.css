@@ -63,6 +63,8 @@ input {
 }
 
 input:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(64, 216, 230, 0.13); }
+input::placeholder { color: var(--muted); opacity: 1; }
+.target-id { color: var(--text); font-weight: 700; }
 
 .shell {
   width: min(100%, 46rem);
