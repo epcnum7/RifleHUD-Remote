@@ -317,22 +317,22 @@
     addLog("Disconnected", "error");
   }
 
-  async function chooseRifleHud() {
-    if (navigator.bluetooth.getDevices) {
-      try {
-        const devices = await navigator.bluetooth.getDevices();
-        const known = devices.find((item) => item.name === "RifleHUD");
-        if (known) return known;
-      } catch {
-        // The picker is the fallback when a previous grant cannot be read.
-      }
-    }
-    // A name filter is the only control the page has over the chooser.
-    // Bluefy cannot sort the iOS Settings Bluetooth list.
+  function chooseRifleHud() {
+    // requestDevice has to be the first Bluetooth call in the tap. An earlier
+    // await, including getDevices(), lets Bluefy fail the chooser and show a
+    // boxed 2 above Connect. The name filter is what limits the list.
     return navigator.bluetooth.requestDevice({
       filters: [{ name: "RifleHUD" }, { namePrefix: "RifleHUD" }],
       optionalServices: [UUIDS.service]
     });
+  }
+
+  function connectionError(error) {
+    const message = error && error.message ? String(error.message) : String(error || "");
+    if (message === "2") {
+      return "Bluefy could not open RifleHUD. Keep the Stick awake and tap Connect again.";
+    }
+    return message || "Connection failed";
   }
 
   async function connect() {
@@ -406,9 +406,9 @@
   ui.connect.onclick = () => {
     ui.detail.textContent = "Connect tapped. Opening Bluetooth chooser...";
     connect().catch((error) => {
-      const message = error.message || String(error);
+      const message = connectionError(error);
       addLog(message, "error");
-      setLinkState("disconnected", message || "Connection failed");
+      setLinkState("disconnected", message);
     });
   };
   ui.disconnect.addEventListener("click", disconnect);
@@ -464,7 +464,7 @@
 
   if (!navigator.bluetooth) ui.compatibility.classList.remove("hidden");
   setLinkState("disconnected", "Controls loaded. Power on the StickS3, then tap Connect.");
-  ui.build.textContent = "Web client v0.14 · controls loaded";
+  ui.build.textContent = "Web client v0.15 · controls loaded";
   addLog("Web controls loaded", "success");
 
   if ("serviceWorker" in navigator) {

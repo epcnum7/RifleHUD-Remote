@@ -7,13 +7,14 @@ Web Bluetooth, such as Bluefy; Safari does not expose `navigator.bluetooth`.
 Deployed controller: <https://epcnum7.github.io/RifleHUD-Remote/>
 
 The page sends one command at a time and waits for its matching
-acknowledgement. Web client v0.14 selects **DOPE Card** or **Auto** and saves
+acknowledgement. Web client v0.15 selects **DOPE Card** or **Auto** and saves
 the checked target rows, density altitude, and wind through one atomic
 **Save Mode and Plan** command. Target IDs start as T1 through T6. Check a
 row and enter its range. Unchecked rows are left off the card. The mode does
 not change until that save. Manual elevation is a separate action. The page
-does not search for or control the binoculars. In Auto the Stick starts that
-link on its own. The page does not contain ballistic tables or credentials.
+does not search for or control the binoculars, and it does not show the
+binocular tilt or the stored 270-degree wind field. In Auto the Stick starts
+that link on its own. The page does not contain ballistic tables or credentials.
 
 The current page button reads **Save Mode and Plan**. An older published copy
 that still says Save Target Plan, Discover KILO, or ABE/ABX does not match

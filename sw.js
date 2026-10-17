@@ -1,5 +1,5 @@
-const CACHE_NAME = "riflehud-remote-v14";
-const APP_FILES = ["./", "./index.html", "./styles.css", "./app.js", "./app.js?v=0.14", "./manifest.webmanifest", "./icon.svg"];
+const CACHE_NAME = "riflehud-remote-v15";
+const APP_FILES = ["./", "./index.html", "./styles.css", "./app.js", "./app.js?v=0.15", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
